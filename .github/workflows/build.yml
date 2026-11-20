@@ -1,0 +1,82 @@
+name: Build Kick Clone (VST3)
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  dsp-tests:
+    name: DSP tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run tests
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -I Source/Dsp tests/dsp_test.cpp -o dsp_test
+          ./dsp_test
+
+  build:
+    name: VST3 (${{ matrix.name }})
+    needs: dsp-tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+          - name: macOS
+            os: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Ad-hoc sign (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          codesign --force --deep -s - "build/KickClone_artefacts/Release/VST3/Kick Clone.vst3"
+          codesign --verify --verbose "build/KickClone_artefacts/Release/VST3/Kick Clone.vst3"
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path "build/KickClone_artefacts/Release/VST3/Kick Clone.vst3" -DestinationPath "dist/KickClone-Windows-VST3.zip"
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc --keepParent "build/KickClone_artefacts/Release/VST3/Kick Clone.vst3" "dist/KickClone-macOS-VST3.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KickClone-${{ matrix.name }}-VST3
+          path: dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
