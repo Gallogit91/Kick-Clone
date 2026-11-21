@@ -6,7 +6,7 @@ if(APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Version minima de macOS")
 endif()
 
-project(KickClone VERSION 1.0.0 LANGUAGES C CXX)
+project(KickClone VERSION 2.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -45,6 +45,9 @@ target_sources(KickClone PRIVATE
     Source/PluginProcessor.h
     Source/PluginEditor.cpp
     Source/PluginEditor.h
+    Source/Dsp/Fft.h
+    Source/Dsp/Events.h
+    Source/Dsp/Isolate.h
     Source/Dsp/KickModel.h
     Source/Dsp/KickAnalyzer.h
     Source/Dsp/KickEngine.h)

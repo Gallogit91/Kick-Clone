@@ -27,16 +27,18 @@ public:
 private:
     void loadFile (const juce::File& file);
     void chooseFile();
-    void exportFile();
+    void exportFile (bool isolated);
+    void nudge (int direction);
     void setStatus (const juce::String& text);
 
     KickCloneProcessor& proc;
 
     std::unique_ptr<MinimalLookAndFeel> lnf;
-    std::unique_ptr<LinkText> selectLink, playLink, exportLink, inputToggle;
-    std::unique_ptr<EnvelopeEditor> pitchEditor, ampEditor;
+    std::unique_ptr<LinkText> selectLink, voicesLink, playLink, isoLink, exportLink, exportIsoLink, inputToggle, nudgeBack, nudgeFwd;
+    std::unique_ptr<EnvelopeEditor> pitchEditor, ampEditor, noiseEditor;
     std::unique_ptr<WaveformView> waves;
     std::vector<std::unique_ptr<LabeledSlider>> sliders;
+    std::unique_ptr<juce::ParameterAttachment> voicesAttach;
     std::unique_ptr<juce::FileChooser> chooser;
 
     juce::String status;

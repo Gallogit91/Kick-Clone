@@ -15,7 +15,7 @@ constexpr float kMaxHz = 1000.0f;
 
 // Envolvente multisegmento: n puntos (tiempo en ms, valor).
 //  - Pitch: valor en Hz, interpolacion logaritmica, mantiene el ultimo valor.
-//  - Amp:   valor lineal 0..1, interpolacion geometrica, silencio tras el ultimo punto.
+//  - Amp / Noise: valor lineal 0..1, interpolacion geometrica, silencio tras el ultimo punto.
 struct Envelope
 {
     int n = 0;
@@ -46,6 +46,8 @@ struct Envelope
         for (int i = idx; i < n - 1; ++i) { t[i] = t[i + 1]; v[i] = v[i + 1]; }
         if (n > 0) --n;
     }
+
+    float endMs() const { return n > 0 ? t[n - 1] : 0.0f; }
 };
 
 inline float evalPitchHz (const Envelope& e, float tMs)
@@ -80,16 +82,26 @@ inline float evalAmp (const Envelope& e, float tMs)
 }
 
 // Bombo completo: lo que extrae el analizador y lo que el usuario edita.
+// Todos los niveles son absolutos (amplitud de la senal, no relativos).
 struct KickModel
 {
     bool valid = false;
-    Envelope pitch;           // Hz
-    Envelope amp;             // 0..1
-    float bodyGain = 0.9f;    // amplitud pico del cuerpo
-    float clickLevel = 0.25f; // relativo a bodyGain
-    float clickDecayMs = 1.5f;
-    float noiseLevel = 0.0f;  // relativo a bodyGain
-    float noiseDecayMs = 60.0f;
+
+    // Cuerpo: oscilador senoidal
+    Envelope pitch;            // Hz
+    Envelope amp;              // 0..1, multiplica a bodyGain
+    float bodyGain = 0.9f;     // amplitud pico del cuerpo
+
+    // Transitorio: rafaga de ruido filtrado paso alto que decae exponencialmente
+    float clickLevel = 0.15f;  // RMS al inicio
+    float clickDecayMs = 1.5f; // constante de tiempo
+    float clickHz = 1500.0f;   // frecuencia de corte del paso alto
+
+    // Ruido: ruido blanco por un paso banda, con envolvente multisegmento (RMS)
+    Envelope noise;
+    float noiseHz = 4000.0f;
+    float noiseQ = 0.7f;
+
     float lengthMs = 350.0f;
 
     // Bombo por defecto, para que el plugin suene bien nada mas cargarlo.
@@ -112,8 +124,13 @@ struct KickModel
         m.bodyGain = 0.9f;
         m.clickLevel = 0.18f;
         m.clickDecayMs = 1.2f;
-        m.noiseLevel = 0.0f;
-        m.noiseDecayMs = 40.0f;
+        m.clickHz = 1800.0f;
+        m.noise.add (0.0f, 0.0f);
+        m.noise.add (6.0f, 0.03f);
+        m.noise.add (40.0f, 0.008f);
+        m.noise.add (120.0f, 0.0f);
+        m.noiseHz = 3500.0f;
+        m.noiseQ = 0.8f;
         m.lengthMs = 420.0f;
         return m;
     }
@@ -123,11 +140,18 @@ struct KickModel
 struct KickParams
 {
     float tuneSemitones = 0.0f;
-    float keytrack = 0.0f;     // 0..1 : cuanto sigue la nota MIDI (relativa a la 36)
-    float pitchAmount = 1.0f;  // 0..2 : escala de la caida de tono
-    float decayScale = 1.0f;   // 0.25..4 : estira la envolvente de amplitud
-    float clickGain = 1.0f;    // 0..2
-    float noiseGain = 1.0f;    // 0..2
-    float driveDb = 0.0f;      // 0..24
+    float keytrack = 0.0f;         // 0..1 : cuanto sigue la nota MIDI (relativa a la 36)
+    float pitchAmount = 1.0f;      // 0..2 : escala de la caida de tono
+    float decayScale = 1.0f;       // 0.25..4 : estira la envolvente de amplitud del cuerpo
+    float harmonics = 0.0f;        // 0..1 : de seno puro a armonicos ricos
+    float driveDb = 0.0f;          // 0..24
+    float clickGain = 1.0f;        // 0..2
+    float clickDecayScale = 1.0f;  // 0.25..4
+    float noiseGain = 1.0f;        // 0..2
+    float noiseToneSt = 0.0f;      // -24..24 : desplaza la banda del ruido
+    float noiseDecayScale = 1.0f;  // 0.25..4 : estira la envolvente del ruido
+    float width = 0.6f;            // 0..1.4 : 0 = mono, 1 = canales de ruido independientes
+    float dynamics = 0.0f;         // 0..1 : compresion/limitacion de salida
+    bool poly = false;             // false = monofonico (cada nota corta la anterior)
 };
 } // namespace kc

@@ -8,32 +8,31 @@ con un motor propio, dejando todas las envolventes editables. Está pensado para
 > pero con código propio: el análisis es procesado de señal clásico (no usa modelos de IA) y no comparte código
 > ni modelos con Drumclone. Por eso el resultado es una aproximación al bombo original, no una copia exacta.
 
+## Novedades de la versión 2.0
+
+- **Pipeline de 5 etapas**: análisis tiempo/frecuencia (flujo espectral, tono, nivel, umbral adaptativo) → extracción con máscaras espectrales suaves
+  (cuerpo / click / ruido) → resíntesis con dinámica y estéreo → osciladores (seno + ruido pasa-banda) con envolventes de modulación → mezcla y postproceso.
+- **Editores de envolvente multisegmento**: *pitch*, *body amplitude* y *noise* (arrastrar puntos; Shift = ajuste fino; rueda = zoom; doble clic en vacío añade punto, sobre un punto lo quita).
+- **Ajuste a nivel de muestra** del inicio del golpe (◂ ▸, Shift ×10, Ctrl/Cmd ×100, o flechas del teclado) con zoom de forma de onda hasta ver cada muestra.
+- **Forma de onda en tiempo real**: aislado vs. original vs. clon, que se actualiza con cada cambio.
+- **Modelos de síntesis sin filtrado de la fuente**: el clon se genera, no se filtra, así que no arrastra artefactos del audio original.
+- **Controles**: tune, pitch drop, decay, harmonics, drive, click, click decay, noise, noise tone, noise decay, width (estéreo), dynamics (compresor + limitador), key track, level; voces mono/poly.
+- **play iso** escucha el golpe aislado; **export clone** (estéreo, 48 kHz, 24 bit) y **export iso** (mono, frecuencia de la fuente).
+- Arrastrar y soltar, 100 % offline; un análisis de 30 s tarda ~0,1 s en la máquina de pruebas.
+
 ## Cómo se usa
 
-1. Carga **Kick Clone** como instrumento (pista de instrumento en Ableton/Cubase, *Channel* → generador en FL Studio).
-2. Arrastra un audio a la ventana o pulsa **Select an audio file**. El plugin busca el primer bombo claro.
-   - Si hay varios golpes (un bucle), **haz clic en la forma de onda** de arriba para elegir cuál clonar.
-3. Toca notas MIDI. Cada nota dispara el bombo (por defecto suena siempre a su tono original).
-4. Ajusta lo que quieras:
-   - **pitch** y **amplitude**: arrastra los puntos. Doble clic en vacío añade un punto; doble clic sobre un punto lo quita.
-   - **tune** (±12 st), **pitch drop** (cuánta caída de tono), **decay**, **click**, **noise**, **drive**,
-     **key track** (0 % = todas las notas suenan igual; 100 % = sigue el teclado) y **level**.
-5. **play** lo escucha sin MIDI; **export .wav** guarda el bombo resultante (48 kHz, mono, 24 bit).
+1. Carga **Kick Clone** como instrumento (pista de instrumento en Ableton/Cubase, generador en FL Studio).
+2. Arrastra un audio a la ventana o pulsa **Select an audio file**. Se detectan los golpes; si hay varios, haz clic en un marcador de la forma de onda.
+3. Toca notas MIDI. Ajusta envolventes y controles; los cambios se ven y se oyen al instante.
+4. El estado (envolventes, parámetros y ruta del audio) se guarda con el proyecto; los proyectos de la v1 se cargan igual.
 
-El estado (envolventes, parámetros y ruta del audio de origen) se guarda con el proyecto.
+## Limitaciones honestas
 
-## Qué extrae del audio
-
-| Parte | Cómo se obtiene |
-|---|---|
-| Inicio del golpe | Energía < 400 Hz y refinado con la señal completa |
-| Envolvente de tono | Seguimiento de semiperiodos por cruces por cero del cuerpo (< 400 Hz) |
-| Envolvente de amplitud | Máximos del cuerpo en ventanas de un periodo |
-| Click | Energía > 1,5 kHz en los primeros 4 ms |
-| Cola de ruido | Energía > 1,5 kHz entre 10 y 25 ms y su caída |
-
-Limitaciones conocidas: el cuerpo se modela como un seno (no capta armónicos propios del bombo original),
-por debajo de 20 Hz no hay seguimiento de tono y en mezclas densas la extracción puede necesitar retoque manual de las envolventes.
+- Es procesado de señal clásico, no un modelo de IA, y no comparte código ni modelos con Drumclone: es una aproximación, no una copia exacta.
+- En mezclas con bajo o caja sonando a la vez, el cuerpo extraído puede contaminarse; retoca las envolventes.
+- Compilado y probado en Linux (pruebas DSP + prueba de humo del procesador/UI). Windows, macOS y los DAW los verifica GitHub Actions al compilar, pero no se ha probado el plugin dentro de FL Studio, Ableton ni Cubase.
+- JUCE se usa bajo AGPLv3 / licencia comercial: para distribuir el plugin comercialmente necesitas una licencia de JUCE.
 
 ## Descargar
 
